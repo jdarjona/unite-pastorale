@@ -10,3 +10,5 @@
 **/*.db-wal
 !src/UnidadPastoral.Api/demo-data/
 !src/UnidadPastoral.Api/demo-data/**
+src/UnidadPastoral.Api/demo-data/*.db-shm
+src/UnidadPastoral.Api/demo-data/*.db-wal

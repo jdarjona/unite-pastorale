@@ -13,6 +13,13 @@ type EditorState = {
   event?: CalendarItem;
 };
 
+function toLocalDateTimeInput(value: string | null | undefined) {
+  if (!value) return '';
+  const date = new Date(value);
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function AdminPage() {
   const [parishes, setParishes] = useState<Parish[]>([]);
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
@@ -179,7 +186,7 @@ export default function AdminPage() {
   function matchesDate(date: string | null | undefined, selectedDate: string) {
     if (!selectedDate) return true;
     if (!date) return false;
-    return new Date(date).toISOString().slice(0, 10) === selectedDate;
+    return toLocalDateTimeInput(date).slice(0, 10) === selectedDate;
   }
 
   const filteredPosts = posts.filter((post) => {
@@ -219,6 +226,10 @@ export default function AdminPage() {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    const eventStartsAt = String(data.get('EventStartsAt') ?? '');
+    if (eventStartsAt) {
+      data.set('EventStartsAt', new Date(eventStartsAt).toISOString());
+    }
 
     try {
       if (editor?.mode === 'edit' && editor.post) {
@@ -280,8 +291,8 @@ export default function AdminPage() {
       title: String(data.get('title') ?? ''),
       description: String(data.get('description') ?? ''),
       location: String(data.get('location') ?? ''),
-      startsAt: String(data.get('startsAt') ?? ''),
-      endsAt: String(data.get('endsAt') ?? '') || null,
+      startsAt: new Date(String(data.get('startsAt') ?? '')).toISOString(),
+      endsAt: String(data.get('endsAt') ?? '') ? new Date(String(data.get('endsAt'))).toISOString() : null,
       allDay: data.get('allDay') === 'on'
     };
 
@@ -367,7 +378,7 @@ export default function AdminPage() {
       fields.namedItem('ParishId').value = post.parishId ? String(post.parishId) : '';
       fields.namedItem('Title').value = post.title;
       fields.namedItem('Body').value = post.body || '';
-      fields.namedItem('EventStartsAt').value = post.eventStartsAt ? new Date(post.eventStartsAt).toISOString().slice(0, 16) : '';
+      fields.namedItem('EventStartsAt').value = toLocalDateTimeInput(post.eventStartsAt);
     }, 0);
   }
 
@@ -411,8 +422,8 @@ export default function AdminPage() {
       fields.namedItem('title').value = event.title;
       fields.namedItem('description').value = event.description || '';
       fields.namedItem('location').value = event.location || '';
-      fields.namedItem('startsAt').value = new Date(event.startsAt).toISOString().slice(0, 16);
-      fields.namedItem('endsAt').value = event.endsAt ? new Date(event.endsAt).toISOString().slice(0, 16) : '';
+      fields.namedItem('startsAt').value = toLocalDateTimeInput(event.startsAt);
+      fields.namedItem('endsAt').value = toLocalDateTimeInput(event.endsAt);
       fields.namedItem('allDay').checked = Boolean(event.allDay);
     }, 0);
   }
@@ -502,7 +513,7 @@ export default function AdminPage() {
             </label>
             <label>
               Date de l’événement
-              <input name="EventStartsAt" type="datetime-local" defaultValue={editor.post?.eventStartsAt ? new Date(editor.post.eventStartsAt).toISOString().slice(0, 16) : ''} />
+              <input name="EventStartsAt" type="datetime-local" defaultValue={toLocalDateTimeInput(editor.post?.eventStartsAt)} />
             </label>
             <label>
               Image de couverture
@@ -622,11 +633,11 @@ export default function AdminPage() {
             </label>
             <label>
               Début
-              <input name="startsAt" type="datetime-local" required defaultValue={editor.event?.startsAt ? new Date(editor.event.startsAt).toISOString().slice(0, 16) : ''} />
+              <input name="startsAt" type="datetime-local" required defaultValue={toLocalDateTimeInput(editor.event?.startsAt)} />
             </label>
             <label>
               Fin
-              <input name="endsAt" type="datetime-local" defaultValue={editor.event?.endsAt ? new Date(editor.event.endsAt).toISOString().slice(0, 16) : ''} />
+              <input name="endsAt" type="datetime-local" defaultValue={toLocalDateTimeInput(editor.event?.endsAt)} />
             </label>
             <label className="checkbox-row">
               <input name="allDay" type="checkbox" defaultChecked={Boolean(editor.event?.allDay)} /> Toute la journée

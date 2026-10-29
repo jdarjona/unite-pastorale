@@ -54,9 +54,18 @@ La web se puede alojar en Vercel y la API en Render. No hace falta comprar un do
 | `Admin__Username` | El nombre de usuario del administrador |
 | `Admin__InitialPassword` | Una contraseña inicial única y segura |
 | `Cors__AllowedOrigins` | La URL de Vercel, por ejemplo `https://unidad-pastoral.vercel.app` |
-| `Demo__RestoreOnStartup` | `true` para restaurar los datos y archivos demo al arrancar |
+| `Database__Provider` | `PostgreSql` para producción con Neon; localmente se mantiene `Sqlite` |
+| `DATABASE_URL` | Connection string pooled de Neon para las peticiones de la API |
+| `DATABASE_URL_UNPOOLED` | Connection string directa de Neon para aplicar migraciones |
+| `AWS_ACCESS_KEY_ID` | Credencial de Object Storage generada por Neon |
+| `AWS_SECRET_ACCESS_KEY` | Secreto de Object Storage generado por Neon |
+| `AWS_ENDPOINT_URL_S3` | Endpoint S3 generado por Neon |
+| `AWS_REGION` | Región del proyecto Neon, por ejemplo `eu-central-1` |
+| `Demo__ImportSnapshot` | Pon `true` para la primera importación; tras verificar los datos, cámbiala a `false` |
 
 4. Despliega y copia la URL que Render asigne a la API, por ejemplo `https://unidad-pastoral-api.onrender.com`.
+
+La API aplica `InitialPostgres` al arrancar. Con `Demo__ImportSnapshot=true`, si la base Postgres está vacía importa parroquias, publicaciones, eventos, álbumes, fotos y actividades pastorales, y copia los archivos al bucket `assets`. No se importan usuarios ni hashes: el admin se crea con `Admin__Username` y `Admin__InitialPassword`. Verifica la web y después desactiva el flag.
 
 ### Web en Vercel
 

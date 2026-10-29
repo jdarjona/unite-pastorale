@@ -81,7 +81,15 @@ export default function CalendarPage() {
             String(cell.date.getMonth() + 1).padStart(2, "0"),
             String(cell.date.getDate()).padStart(2, "0")
           ].join("-");
-          const dayEvents = events.filter((event) => event.startsAt.slice(0, 10) === key);
+          const dayEvents = events.filter((event) => {
+            const startsAt = new Date(event.startsAt);
+            const eventKey = [
+              startsAt.getFullYear(),
+              String(startsAt.getMonth() + 1).padStart(2, "0"),
+              String(startsAt.getDate()).padStart(2, "0")
+            ].join("-");
+            return eventKey === key;
+          });
           return (
             <div key={`${key}-${cell.current}`} className={`day${cell.current ? "" : " muted"}`}>
               <strong>{cell.date.getDate()}</strong>

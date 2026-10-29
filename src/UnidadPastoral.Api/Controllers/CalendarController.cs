@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UnidadPastoral.Api.Data;
 using UnidadPastoral.Api.Models;
+using UnidadPastoral.Api.Services;
 
 namespace UnidadPastoral.Api.Controllers;
 
@@ -21,12 +22,14 @@ public class CalendarController(AppDbContext db) : ControllerBase
 
         if (from is not null)
         {
-            query = query.Where(e => e.StartsAt >= from);
+            var fromUtc = UtcDateTime.Normalize(from.Value);
+            query = query.Where(e => e.StartsAt >= fromUtc);
         }
 
         if (to is not null)
         {
-            query = query.Where(e => e.StartsAt <= to);
+            var toUtc = UtcDateTime.Normalize(to.Value);
+            query = query.Where(e => e.StartsAt <= toUtc);
         }
 
         return Ok(await query.OrderBy(e => e.StartsAt).ToListAsync());
@@ -47,8 +50,8 @@ public class CalendarController(AppDbContext db) : ControllerBase
             Title = form.Title,
             Description = form.Description ?? "",
             Location = form.Location ?? "",
-            StartsAt = form.StartsAt,
-            EndsAt = form.EndsAt,
+            StartsAt = UtcDateTime.Normalize(form.StartsAt),
+            EndsAt = form.EndsAt is null ? null : UtcDateTime.Normalize(form.EndsAt.Value),
             AllDay = form.AllDay
         };
 
@@ -76,8 +79,8 @@ public class CalendarController(AppDbContext db) : ControllerBase
         item.Title = form.Title;
         item.Description = form.Description ?? "";
         item.Location = form.Location ?? "";
-        item.StartsAt = form.StartsAt;
-        item.EndsAt = form.EndsAt;
+        item.StartsAt = UtcDateTime.Normalize(form.StartsAt);
+        item.EndsAt = form.EndsAt is null ? null : UtcDateTime.Normalize(form.EndsAt.Value);
         item.AllDay = form.AllDay;
 
         await db.SaveChangesAsync();

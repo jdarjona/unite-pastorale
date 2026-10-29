@@ -5,6 +5,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
+using Amazon.Runtime;
+using Amazon.S3;
 using UnidadPastoral.Api.Data;
 using UnidadPastoral.Api.Services;
 
@@ -125,9 +127,25 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
 builder.Services.AddOpenApi();
-var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=unidad-pastoral.db";
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
+var connectionString = PostgresConnectionString.Normalize(builder.Configuration["DATABASE_URL"]
+    ?? builder.Configuration.GetConnectionString("Default")
+    ?? "Data Source=unidad-pastoral.db");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(connectionString));
+{
+    if (string.Equals(databaseProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(connectionString);
+    }
+    else if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseSqlite(connectionString);
+    }
+    else
+    {
+        throw new InvalidOperationException($"Unsupported database provider '{databaseProvider}'. Use Sqlite or PostgreSql.");
+    }
+});
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(jwtKey))
@@ -163,6 +181,28 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod()));
 builder.Services.AddSingleton<TokenService>();
+var storageEndpoint = builder.Configuration["AWS_ENDPOINT_URL_S3"];
+var storageAccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
+var storageSecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
+IAmazonS3? neonStorage = null;
+if (!string.IsNullOrWhiteSpace(storageEndpoint))
+{
+    if (string.IsNullOrWhiteSpace(storageAccessKey) || string.IsNullOrWhiteSpace(storageSecretKey))
+    {
+        throw new InvalidOperationException("Neon Object Storage endpoint is configured but its S3 credentials are missing.");
+    }
+
+    neonStorage = new AmazonS3Client(
+        new BasicAWSCredentials(storageAccessKey, storageSecretKey),
+        new AmazonS3Config
+        {
+            ServiceURL = storageEndpoint,
+            AuthenticationRegion = builder.Configuration["AWS_REGION"],
+            ForcePathStyle = true
+        });
+    builder.Services.AddSingleton<IAmazonS3>(neonStorage);
+}
+
 builder.Services.AddSingleton<UploadService>();
 builder.Services.AddScoped<IPastoraleActivityService, PastoraleActivityService>();
 
@@ -172,14 +212,49 @@ var uploads = Path.Combine(app.Environment.ContentRootPath, "uploads");
 Directory.CreateDirectory(uploads);
 if (builder.Configuration.GetValue<bool>("Demo:RestoreOnStartup"))
 {
+    if (!string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("The bundled demo snapshot can only be restored to SQLite.");
+    }
+
     RestoreDemoData(app.Environment.ContentRootPath, connectionString, uploads);
 }
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
-    EnsureDatabaseCompatibility(db);
+    if (string.Equals(databaseProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase))
+    {
+        var migrationConnectionString = PostgresConnectionString.Normalize(builder.Configuration["DATABASE_URL_UNPOOLED"]
+            ?? builder.Configuration.GetConnectionString("Migration")
+            ?? connectionString);
+        var migrationOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(migrationConnectionString)
+            .Options;
+        await using (var migrationContext = new AppDbContext(migrationOptions))
+        {
+            await migrationContext.Database.MigrateAsync();
+        }
+
+        if (builder.Configuration.GetValue<bool>("Demo:ImportSnapshot"))
+        {
+            var storage = scope.ServiceProvider.GetRequiredService<IAmazonS3>();
+            var snapshotPath = Path.Combine(app.Environment.ContentRootPath, "demo-data", "unidad-pastoral.db");
+            var imported = await DemoDataImporter.ImportIfEmptyAsync(
+                db,
+                snapshotPath,
+                Path.Combine(app.Environment.ContentRootPath, "demo-data", "uploads"),
+                storage,
+                builder.Configuration["Neon:ObjectStorage:Bucket"] ?? "assets",
+                CancellationToken.None);
+            app.Logger.LogInformation("Demo snapshot import result: {Imported}", imported ? "imported" : "skipped; database already has data");
+        }
+    }
+    else
+    {
+        db.Database.EnsureCreated();
+        EnsureDatabaseCompatibility(db);
+    }
     var initialAdminPassword = builder.Configuration["Admin:InitialPassword"];
     if (string.IsNullOrWhiteSpace(initialAdminPassword) && !app.Environment.IsDevelopment())
     {

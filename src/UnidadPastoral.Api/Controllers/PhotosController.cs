@@ -50,7 +50,7 @@ public class PhotosController(AppDbContext db, UploadService uploads) : Controll
             Title = form.Title ?? form.File.FileName,
             Caption = form.Caption ?? "",
             FilePath = await uploads.SaveAsync(form.File, "photos"),
-            TakenAt = form.TakenAt ?? DateTime.UtcNow
+            TakenAt = form.TakenAt is null ? DateTime.UtcNow : UtcDateTime.Normalize(form.TakenAt.Value)
         };
 
         db.Photos.Add(photo);

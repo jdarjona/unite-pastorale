@@ -54,7 +54,7 @@ public class PostsController(AppDbContext db, UploadService uploads) : Controlle
             Slug = slug,
             Body = form.Body ?? "",
             PublishedAt = DateTime.UtcNow,
-            EventStartsAt = form.EventStartsAt
+            EventStartsAt = form.EventStartsAt is null ? null : UtcDateTime.Normalize(form.EventStartsAt.Value)
         };
 
         if (form.Cover is not null)
@@ -113,7 +113,7 @@ public class PostsController(AppDbContext db, UploadService uploads) : Controlle
 
         if (form.EventStartsAt is not null)
         {
-            post.EventStartsAt = form.EventStartsAt.Value;
+            post.EventStartsAt = UtcDateTime.Normalize(form.EventStartsAt.Value);
         }
 
         if (form.Cover is not null)
