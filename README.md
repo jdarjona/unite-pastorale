@@ -1,29 +1,29 @@
 # Unidad Pastoral
 
-Sitio web para una unidad pastoral de cinco parroquias: fotos, noticias, eventos, documentos y calendario por parroquia.
+Site web pour une unité pastorale composée de cinq paroisses : photos, actualités, événements, documents et calendrier par paroisse.
 
-## Arquitectura
+## Architecture
 
-- **React + Vite** (`src/web`): web pública y panel `/admin`.
-- **ASP.NET Core 9** (`src/UnidadPastoral.Api`): API REST, autenticación JWT y ficheros subidos.
-- **SQLite**: base `unidad-pastoral.db` creada al arrancar la API.
+- **React + Vite** (`src/web`) : site public et panneau `/admin`.
+- **ASP.NET Core 9** (`src/UnidadPastoral.Api`) : API REST, authentification JWT et fichiers envoyés.
+- **SQLite** : base de données `unidad-pastoral.db` créée au démarrage de l’API.
 
-Las parroquias de ejemplo se cargan en `src/UnidadPastoral.Api/Data/DbSeeder.cs`. Ese es el mejor sitio para el primer cambio: nombres reales, direcciones y horarios de misa.
+Les paroisses d’exemple sont chargées dans `src/UnidadPastoral.Api/Data/DbSeeder.cs`. C’est l’emplacement idéal pour les premières modifications : noms réels, adresses et horaires des messes.
 
-## Cómo ejecutarlo
+## Exécution du projet
 
-Hace falta [.NET 9 SDK](https://dotnet.microsoft.com/download) y [Node.js LTS](https://nodejs.org/).
+Vous devez disposer du [.NET 9 SDK](https://dotnet.microsoft.com/download) et de [Node.js LTS](https://nodejs.org/).
 
-Terminal 1 — API:
+Terminal 1 — API :
 
 ```powershell
 cd src/UnidadPastoral.Api
 dotnet run --launch-profile http
 ```
 
-La API queda en `http://localhost:5214`.
+L’API est accessible à l’adresse `http://localhost:5214`.
 
-Terminal 2 — web:
+Terminal 2 — site web :
 
 ```powershell
 cd src/web
@@ -31,68 +31,70 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`.
+Ouvrez `http://localhost:5173`.
 
-Panel de publicación: `/admin`  
-Usuario inicial: `admin` / `CambiaEsto1`
+Panneau de publication : `/admin`  
+Utilisateur initial : `admin` / `CambiaEsto1`
 
-Vite reenvía `/api` y `/uploads` a la API, así que las fotos y documentos se ven en el mismo origen.
+Vite redirige `/api` et `/uploads` vers l’API, afin que les photos et les documents soient visibles depuis la même origine.
 
-## Publicar una demo gratis
+## Publier une démonstration gratuitement
 
-La web se puede alojar en Vercel y la API en Render. No hace falta comprar un dominio: ambas plataformas proporcionan una URL pública.
+Le site peut être hébergé sur Vercel et l’API sur Render. Il n’est pas nécessaire d’acheter un domaine : les deux plateformes fournissent une URL publique.
 
-### API en Render
+### API sur Render
 
-1. Abre el [Dashboard de Render](https://dashboard.render.com/) y crea un **Web Service** conectado al repositorio `jdarjona/unidad-pastoral`.
-2. Selecciona **Docker** como entorno y el plan **Free**. El `Dockerfile` está en la raíz del repositorio.
-3. Antes de desplegar, añade estas variables en **Environment**:
+1. Ouvrez le [tableau de bord Render](https://dashboard.render.com/) et créez un **Web Service** connecté au dépôt `jdarjona/unidad-pastoral`.
+2. Sélectionnez **Docker** comme environnement et choisissez le plan **Free**. Le `Dockerfile` se trouve à la racine du dépôt.
+3. Avant le déploiement, ajoutez les variables suivantes dans **Environment** :
 
-| Variable | Valor |
+| Variable | Valeur |
 | --- | --- |
-| `Jwt__Key` | Secreto aleatorio de al menos 32 caracteres |
-| `Admin__Username` | El nombre de usuario del administrador |
-| `Admin__InitialPassword` | Una contraseña inicial única y segura |
-| `Cors__AllowedOrigins` | La URL de Vercel, por ejemplo `https://unidad-pastoral.vercel.app` |
-| `Database__Provider` | `PostgreSql` para producción con Neon; localmente se mantiene `Sqlite` |
-| `DATABASE_URL` | Connection string pooled de Neon para las peticiones de la API |
-| `DATABASE_URL_UNPOOLED` | Connection string directa de Neon para aplicar migraciones |
-| `AWS_ACCESS_KEY_ID` | Credencial de Object Storage generada por Neon |
-| `AWS_SECRET_ACCESS_KEY` | Secreto de Object Storage generado por Neon |
-| `AWS_ENDPOINT_URL_S3` | Endpoint S3 generado por Neon |
-| `AWS_REGION` | Región del proyecto Neon, por ejemplo `eu-central-1` |
-| `Demo__ImportSnapshot` | Pon `true` para la primera importación; tras verificar los datos, cámbiala a `false` |
+| `Jwt__Key` | Secret aléatoire d’au moins 32 caractères |
+| `Admin__Username` | Nom d’utilisateur de l’administrateur |
+| `Admin__InitialPassword` | Mot de passe initial unique et sécurisé |
+| `Cors__AllowedOrigins` | URL Vercel, par exemple `https://unidad-pastoral.vercel.app` |
+| `Database__Provider` | `PostgreSql` pour la production avec Neon ; `Sqlite` est conservé en local |
+| `DATABASE_URL` | Chaîne de connexion Neon avec pool pour les requêtes de l’API |
+| `DATABASE_URL_UNPOOLED` | Chaîne de connexion directe Neon pour appliquer les migrations |
+| `AWS_ACCESS_KEY_ID` | Identifiant de stockage d’objets généré par Neon |
+| `AWS_SECRET_ACCESS_KEY` | Secret de stockage d’objets généré par Neon |
+| `AWS_ENDPOINT_URL_S3` | Point d’accès S3 généré par Neon |
+| `AWS_REGION` | Région du projet Neon, par exemple `eu-central-1` |
+| `Demo__ImportSnapshot` | Définissez `true` pour la première importation, puis `false` après avoir vérifié les données |
 
-4. Despliega y copia la URL que Render asigne a la API, por ejemplo `https://unidad-pastoral-api.onrender.com`.
+4. Lancez le déploiement, puis copiez l’URL attribuée par Render à l’API, par exemple `https://unidad-pastoral-api.onrender.com`.
 
-La API aplica `InitialPostgres` al arrancar. Con `Demo__ImportSnapshot=true`, si la base Postgres está vacía importa parroquias, publicaciones, eventos, álbumes, fotos y actividades pastorales, y copia los archivos al bucket `assets`. No se importan usuarios ni hashes: el admin se crea con `Admin__Username` y `Admin__InitialPassword`. Verifica la web y después desactiva el flag.
+Au démarrage, l’API applique `InitialPostgres`. Avec `Demo__ImportSnapshot=true`, si la base PostgreSQL est vide, elle importe les paroisses, publications, événements, albums, photos et activités pastorales, puis copie les fichiers dans le bucket `assets`. Les utilisateurs et les hachages ne sont pas importés : l’administrateur est créé à partir de `Admin__Username` et `Admin__InitialPassword`. Vérifiez le site, puis désactivez l’option.
 
-### Web en Vercel
+### Site web sur Vercel
 
-1. Abre [Vercel](https://vercel.com/new) e importa el mismo repositorio.
-2. Configura **Root Directory** como `src/web`. El comando de compilación es `npm run build` y la carpeta de salida es `dist`.
-3. Añade esta variable de entorno:
+1. Ouvrez [Vercel](https://vercel.com/new) et importez le même dépôt.
+2. Configurez **Root Directory** sur `src/web`. La commande de compilation est `npm run build` et le dossier de sortie est `dist`.
+3. Ajoutez cette variable d’environnement :
 
-| Variable | Valor |
+| Variable | Valeur |
 | --- | --- |
-| `VITE_API_URL` | URL de la API en Render, sin barra final |
+| `VITE_API_URL` | URL de l’API sur Render, sans barre oblique finale |
 
-4. Despliega. Si Vercel asigna una URL distinta de la que pusiste en `Cors__AllowedOrigins`, actualiza esa variable en Render y reinicia la API.
+4. Lancez le déploiement. Si Vercel attribue une URL différente de celle indiquée dans `Cors__AllowedOrigins`, mettez cette variable à jour dans Render puis redémarrez l’API.
 
-### Límites de la demo gratuita
+### Limites de la démonstration gratuite
 
-- Render puede suspender la API tras 15 minutos sin visitas; la primera petición posterior puede tardar alrededor de un minuto.
-- Con `Demo__RestoreOnStartup=true`, cada arranque restaura `src/UnidadPastoral.Api/demo-data/unidad-pastoral.db` y sus uploads. El snapshot incluye el contenido local empaquetado, pero no usuarios ni hashes de contraseña: el administrador se crea con `Admin__Username` y `Admin__InitialPassword`.
-- Las modificaciones hechas desde el panel de la demo no actualizan el snapshot; al reiniciar volverá el contenido empaquetado. Para cambiar la base de partida, actualiza los archivos de `demo-data`, haz commit y vuelve a desplegar.
-- El plan Hobby de Vercel está destinado a proyectos personales y no comerciales. Revisa sus condiciones para un sitio institucional; también puedes alojar la web estática en Render.
+- Render peut suspendre l’API après 15 minutes sans visite ; la première requête suivante peut prendre environ une minute.
+- Avec `Demo__RestoreOnStartup=true`, chaque démarrage restaure `src/UnidadPastoral.Api/demo-data/unidad-pastoral.db` ainsi que ses fichiers envoyés. L’instantané contient le contenu local empaqueté, mais aucun utilisateur ni aucun hachage de mot de passe : l’administrateur est créé à partir de `Admin__Username` et `Admin__InitialPassword`.
+- Les modifications effectuées depuis le panneau de démonstration ne mettent pas à jour l’instantané ; au redémarrage, le contenu empaqueté est rétabli. Pour modifier la base initiale, mettez à jour les fichiers de `demo-data`, créez un commit et redéployez.
+- Le plan Hobby de Vercel est destiné aux projets personnels et non commerciaux. Consultez ses conditions pour un site institutionnel ; vous pouvez aussi héberger le site statique sur Render.
 
 ## GitHub
 
-El repositorio ya tiene configurado el remoto `origin`. Para enviar futuros cambios a la rama `master`:
+Dépôt GitHub : [jdarjona/unidad-pastoral](https://github.com/jdarjona/unidad-pastoral).
+
+La configuration distante `origin` pointe déjà vers ce dépôt. Pour envoyer les modifications ultérieures vers la branche `master` :
 
 ```powershell
 cd C:\Users\jdarj\source\repos\unidad-pastoral
 git add .
-git commit -m "Descripción del cambio"
+git commit -m "Description de la modification"
 git push origin master
 ```
