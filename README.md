@@ -42,6 +42,27 @@ Vite redirige `/api` et `/uploads` vers l’API, afin que les photos et les docu
 
 Le site peut être hébergé sur Vercel et l’API sur Render. Il n’est pas nécessaire d’acheter un domaine : les deux plateformes fournissent une URL publique.
 
+### Base de données sur Neon
+
+1. Créez un projet PostgreSQL dans la [console Neon](https://console.neon.tech/). La base de données et son rôle sont créés avec le projet.
+2. Dans le tableau de bord du projet, ouvrez **Connect** et récupérez les deux chaînes de connexion :
+   - La chaîne **pooled** (hôte contenant `-pooler`) pour `DATABASE_URL`, utilisée par l’API pour ses requêtes.
+   - La chaîne **directe** (hôte sans `-pooler`) pour `DATABASE_URL_UNPOOLED`, utilisée pour les migrations.
+3. Dans Render, ajoutez ces deux valeurs comme variables d’environnement et définissez `Database__Provider` sur `PostgreSql`. Ne publiez pas les chaînes de connexion dans le dépôt : elles contiennent les identifiants de la base.
+
+Au démarrage, l’API applique automatiquement les migrations PostgreSQL en attente avec la connexion directe, puis crée les données initiales (paroisses et administrateur) si nécessaire. Aucune commande SQL manuelle n’est requise pour initialiser le schéma.
+
+### Photos et documents envoyés
+
+En production, les photos et documents envoyés depuis le panneau d’administration sont stockés dans **Neon Object Storage**, dans un bucket nommé `assets`. Ce stockage doit être configuré sur la même branche Neon que la base de données :
+
+1. Dans la console Neon, ouvrez le projet et la branche utilisés par l’API, puis créez le bucket `assets`.
+2. Créez des identifiants de stockage avec les autorisations de lecture et d’écriture. Récupérez le point de terminaison S3 et la région de cette branche.
+3. Dans les variables d’environnement Render, renseignez `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3` et `AWS_REGION` avec ces valeurs. Elles figurent dans le tableau de la section suivante. Gardez ces identifiants secrets et ne les ajoutez pas au dépôt.
+4. Configurez le stockage avant le premier déploiement ou avant l’importation initiale avec `Demo__ImportSnapshot=true` : les fichiers de l’instantané sont alors copiés dans le bucket `assets`.
+
+L’API enregistre les fichiers dans le bucket et les sert via les chemins `/uploads/...` ; le navigateur n’accède pas directement au bucket. En développement local, si les variables S3 ne sont pas définies, les fichiers sont enregistrés dans le dossier local `uploads/`. Ne vous fiez pas à ce stockage local pour les fichiers de production.
+
 ### API sur Render
 
 1. Ouvrez le [tableau de bord Render](https://dashboard.render.com/) et créez un **Web Service** connecté au dépôt `jdarjona/unidad-pastoral`.
